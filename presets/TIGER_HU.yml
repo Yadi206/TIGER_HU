@@ -7,7 +7,7 @@
       config:
         id: TIGER_HU
         name: TIGER_HU 项目模式
-        description: 按 8 个标准目录组织项目，版本号记在 VERSION 里自动流水，发布按 v大.小 归档；工具与 ptc 组合一致。
+        description: 按 8 个标准目录组织项目，版本号记在 VERSION 里自动流水，发布按 v大.小 归档；03-src 支持本地 git 或克隆远程仓库；工具与 ptc 组合一致。
         order: 5
         plugins:
           - id: persona
@@ -22,7 +22,7 @@
                 - 00-standards/：本项目的开发标准（编码规范、命名与目录约定、评审与验收要求、流程说明），以及版本号文件 VERSION；其中的约定约束其他目录里的内容。
                 - 01-tmp/：临时文件与一次性测试脚本，可随时清理。
                 - 02-output/：任务产出的文件（生成的报表、文档、中间结果）。
-                - 03-src/：正式代码；目录内初始化为本地 git 仓库。
+                - 03-src/：正式代码；按用户是否提供远程仓库地址，初始化为本地 git 仓库，或直接克隆远程仓库到该目录。
                 - 04-templates/：模板文件。
                 - 05-release/：发布的正式文件；每次发布放进 05-release/v<大>.<小>/（如 05-release/v1.3/），旧版本保留不覆盖。
                 - 06-references/：参考应用，即通过模板创建需求的那类应用（模板与应用的存放处），不是用户提供的输入资料。
@@ -40,7 +40,16 @@
                 - 大版本只能由用户确认：用户明确同意后大版本 +1、小版本归 0（如 1.7 → 2.0）；未经确认不得改动大版本。
                 - 发布按当前 VERSION 建 05-release/v<大>.<小>/ 并放入发布物；同名目录已存在时先与用户确认版本号，不覆盖旧版本。
 
-                03-src/ 的 git 初始化：目录建好后在 03-src/ 内执行 git init。执行前先检测 git 是否可用（例如 git --version）；未安装就跳过并在结果里说明，不要尝试安装 git。只做 git init：不自动 git add / git commit，不配置 remote，也不修改全局 git 配置。
+                发版时的 git 行为（按两种模式区分，见下文判断）：
+                - 本地 git（03-src/ 无 remote）：发布时直接提交 03-src/ 的代码（git -C 03-src add -A 后 commit，提交信息写明版本与本次改动），不需要用户额外下指令；没有可提交的改动就跳过并说明。
+                - 远程 git（03-src/ 有 remote）：发布时不自动 add / commit / push；等用户明确发出提交指令后再提交（用户要求推送时再 push）。用户没有提交指令就只发布文件，并在回复里提示代码尚未提交。
+
+                03-src/ 的 git 初始化（两种模式，互斥）：
+                - 执行前先检测 git 是否可用（例如 git --version）；未安装就跳过并在结果里说明，不要尝试安装 git。
+                - 本地 git（默认）：用户未提供远程仓库地址时，在 03-src/ 内执行 git init，不配置 remote。用户没有说明就用这种，不必专门追问。
+                - 远程 git：用户提供了仓库地址（https / ssh 等 git 可克隆的地址）时，不在 03-src/ 内做本地 git，而是直接把该仓库克隆到 03-src/（03-src/ 为空时执行 git clone <地址> 03-src）。克隆失败时保留 03-src/ 为空并如实报告原因，不要回退成 git init，也不要自行更换地址。
+                - 模式判断以 03-src/ 是否配置了 remote 为准（git -C 03-src remote 有输出即远程 git，无输出即本地 git）；不要写额外的模式标记文件。
+                - 只操作 03-src/ 自己的仓库：不配置新的 remote，不修改全局 git 配置；提交需要的作者身份从 00-standards/git-accounts.json 读取（存在时，可用 git -c user.name=... -c user.email=... 临时指定），不要把令牌写进 03-src/ 或任何被跟踪的文件。
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
