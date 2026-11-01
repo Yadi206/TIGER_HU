@@ -1,0 +1,9 @@
+# 凭据文件：永不提交
+00-standards/git-accounts.json
+
+# 本地临时文件与任务产出
+01-tmp/
+02-output/
+
+# 代码目录由安装脚本创建，并各自独立 git init
+03-src/
