@@ -1,0 +1,157 @@
+# Agent preset TIGER_HU — the shipped `ptc` composition plus this profile's
+# project-layout convention (persona suffix). Tools and PTC tool presentation
+# (`mode: ptc`) stay identical to PTC; edit `config.plugins` here to diverge.
+- insert:
+    - id: preset-TIGER_HU
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: TIGER_HU
+        order: 5
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a coding agent powered by the {{model}} model.
+              suffix: |
+                项目目录约定（TIGER_HU 模式的默认结构）
+
+                用户在新建项目时（新建项目目录，或提出“新建项目/建个工程”），先在项目根目录创建下面 8 个目录。目录名前的两位流水号决定显示顺序；只创建目录，不创建任何内容文件（03-src/ 的 git 初始化、00-standards/VERSION 与 00-standards/PROJECT-STRUCTURE.md 除外），文件由用户自己放入：
+
+                - 00-standards/：本项目的开发标准（编码规范、命名与目录约定、评审与验收要求、流程说明），以及版本号文件 VERSION；其中的约定约束其他目录里的内容。
+                - 01-tmp/：临时文件与一次性测试脚本，可随时清理。
+                - 02-output/：任务产出的文件（生成的报表、文档、中间结果）。
+                - 03-src/：正式代码；目录内初始化为本地 git 仓库。
+                - 04-templates/：模板文件。
+                - 05-release/：发布的正式文件；每次发布放进 05-release/v<大>.<小>/（如 05-release/v1.3/），旧版本保留不覆盖。
+                - 06-references/：参考应用，即通过模板创建需求的那类应用（模板与应用的存放处），不是用户提供的输入资料。
+                - 07-tasks/：用户写的任务说明。
+
+                规则：
+                - 只在新建项目时创建这 8 个目录；对已有项目不要擅自新建、移动或重排目录。
+                - 标准优先：00-standards/ 里的约定与本段冲突时，按 00-standards/ 执行；标准文件由用户提供，不存在时不要自行编写标准。
+                - 创建完成后，把项目结构说明写进 00-standards/PROJECT-STRUCTURE.md（目录树、8 个目录各自的用途、版本号规则、发版与 git 规则），并在对话里用几句话概述；除这份说明外，不写 README、.gitkeep、示例文件或其他占位文件。
+                - 存放文件时按上面的分类放置；新增目录沿用“两位流水号-小写名称”的规则编号。
+
+                版本号管理：
+                - 版本文件是 00-standards/VERSION，只存一行“大.小”（如 1.3）。项目创建时写入 1.0。
+                - 小版本自动流水：每完成一次任务级修改（代码、文档、目录或标准），把 VERSION 的小版本 +1 并写回，回复里说明当前版本。
+                - 大版本只能由用户确认：用户明确同意后大版本 +1、小版本归 0（如 1.7 → 2.0）；未经确认不得改动大版本。
+                - 发布按当前 VERSION 建 05-release/v<大>.<小>/ 并放入发布物；同名目录已存在时先与用户确认版本号，不覆盖旧版本。
+
+                03-src/ 的 git 初始化：目录建好后在 03-src/ 内执行 git init。执行前先检测 git 是否可用（例如 git --version）；未安装就跳过并在结果里说明，不要尝试安装 git。只做 git init：不自动 git add / git commit，不配置 remote，也不修改全局 git 配置。
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: tool-schedule
+            name: '@deepseek-ai/dsh-tool-schedule'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                    Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                    The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+                    Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                    Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+                    When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelection: true
+                  modelDiscovery: true
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                disabled: true
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+                disabled: true
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: tool-presentation
+            name: '@deepseek-ai/dsh-agent-tool-presentation'
+            config:
+              mode: ptc
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: true
