@@ -45,6 +45,8 @@ powershell -ExecutionPolicy Bypass -File .\install-preset.ps1
 | 项 | 值 | 说明 |
 | --- | --- | --- |
 | `id` | `TIGER_HU` | 会话保存的预设标识 |
+| `name` | `TIGER_HU 项目模式` | 预设列表里显示的名称 |
+| `description` | 按 8 个标准目录组织项目，版本号记在 VERSION 里自动流水，发布按 v大.小 归档；工具与 ptc 组合一致。 | 预设列表里的说明 |
 | `order` | `5` | 预设列表排序 |
 | 插件行 | 22 条 | 与 PTC 一致的工具与分组 |
 

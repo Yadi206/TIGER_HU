@@ -6,6 +6,8 @@
       name: '@deepseek-ai/dsh-agent-preset'
       config:
         id: TIGER_HU
+        name: TIGER_HU 项目模式
+        description: 按 8 个标准目录组织项目，版本号记在 VERSION 里自动流水，发布按 v大.小 归档；工具与 ptc 组合一致。
         order: 5
         plugins:
           - id: persona
